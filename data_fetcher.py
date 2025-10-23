@@ -58,7 +58,8 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7):
             "companyname": e.get("companyname"),
             "code": e.get("code"),
             "typeEarnings": e.get("typeEarnings"),
-            "paymentDate": e.get("dateCom"),
+            "dataCom": e.get("dateCom"),
+            "paymentDate": e.get("paymentDividend"),
             "approvedondate": e.get("approvedondate"),
             "value": e.get("value"),
             "dy":  pd.to_numeric(str(e.get("dy", "0")).replace(",", "."), errors="coerce")
@@ -79,17 +80,40 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7):
 
 def get_price_history(ticker, start, end):
     """
-    Busca histórico de preços via Yahoo Finance (yfinance).
+    Busca histórico de preços via Yahoo Finance (yfinance) com dados intraday.
+    Retorna o preço mais próximo das 11:00.
     """
     import yfinance as yf
+    from datetime import datetime, timedelta
 
     print(f"[INFO] Baixando histórico de {ticker}...")
     try:
-        df = yf.download(ticker, start=start, end=end, progress=False)
+        # Baixa dados com intervalo de 1 hora
+        ticker_obj = yf.Ticker(ticker)
+        df = ticker_obj.history(start=start, end=end, interval="1h")
+        
         if df.empty:
             print(f"[WARN] Nenhum dado disponível para {ticker}.")
             return pd.DataFrame()
-        return df[["Open", "Close"]].reset_index()
+        
+        # Converte o índice para datetime se necessário
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+            
+        # Filtra apenas os dados das 11:00
+        df['hour'] = df.index.hour
+        df_11h = df[df['hour'] == 11]
+        
+        if not df_11h.empty:
+            # Reseta o índice e mantém a coluna de data
+            df_11h = df_11h.copy()
+            df_11h['Date'] = df_11h.index
+            result = df_11h[["Date", "Open", "Close"]].reset_index(drop=True)
+            return result
+        else:
+            print(f"[WARN] Nenhum dado às 11:00 disponível para {ticker}.")
+            return pd.DataFrame()
+            
     except Exception as e:
         print(f"[ERRO] Falha ao acessar dados para {ticker}: {e}")
         return pd.DataFrame()
