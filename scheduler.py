@@ -26,8 +26,16 @@ def schedule_trades(df_trades):
                 # Primeiro converte para datetime (aceita vários formatos)
                 datas = pd.to_datetime(result[col])
                 # Depois formata para o padrão brasileiro
-                result[col] = datas.dt.strftime("%d/%m/%Y %H:%M")
+                result[col] = datas
             except Exception as e:
                 print(f"[WARN] Erro ao formatar coluna {col}: {e}")
+        
+        # Salva os dados agendados em um arquivo CSV
+        try:
+            output_file = "data_cache/scheduled_trades.csv"
+            result.to_csv(output_file, index=False, encoding='utf-8-sig')
+            print(f"[INFO] Dados agendados salvos em: {output_file}")
+        except Exception as e:
+            print(f"[ERRO] Falha ao salvar arquivo CSV: {e}")
     
     return result

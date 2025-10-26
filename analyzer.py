@@ -2,8 +2,9 @@
 import pandas as pd
 from datetime import datetime, timedelta
 from data_fetcher import get_price_history
+from date_extensions import ajustar_periodos
 
-def rank_best_trades(eventos_df):
+def rank_best_trades(eventos_df,days_offset):
     """
     Recebe um DataFrame com os eventos e retorna um DataFrame com os melhores trades,
     filtrando DY >= 0.7 e calculando o retorno total (preço + dividendo).
@@ -21,56 +22,52 @@ def rank_best_trades(eventos_df):
     # Calcula retornos baseados nos preços reais
     resultados = []
     for _, evento in df.iterrows():
-        ticker = evento["code"] + ".SA"  # Adiciona sufixo do Yahoo Finance
+        ticker = evento["Ativo"] + ".SA"  # Adiciona sufixo do Yahoo Finance
         try:
             # Converte a data considerando formato brasileiro
-            data_com = pd.to_datetime(evento["dataCom"], format="%d/%m/%Y", dayfirst=True)
-        except:
+            data_com = pd.to_datetime(evento["DataCom"], format="%d/%m/%Y", dayfirst=True)
+        except Exception as e:
             try:
                 # Tenta formato alternativo caso a data já esteja em outro formato
-                data_com = pd.to_datetime(evento["dataCom"])
+                data_com = pd.to_datetime(evento["DataCom"])
             except Exception as e:
-                print(f"[WARN] Erro ao processar data para {evento['code']}: {e}")
+                print(f"[WARN] Erro ao processar data para {evento['Ativo']}: {e}")
                 continue
-        
-        # Define datas D-1 e D+1
-        data_compra = (data_com - timedelta(days=1)).strftime("%Y-%m-%d")
-        data_venda = (data_com + timedelta(days=1)).strftime("%Y-%m-%d")
-        
+            
+        start_day, start_next, end_day, end_next = ajustar_periodos(data_com, data_com, days_offset)
+
         # Busca preços
-        precos = get_price_history(ticker, data_compra, data_venda)
+        precos = get_price_history(ticker, start_day, start_next, end_day, end_next)
         
         if not precos.empty and len(precos) >= 2:
-            preco_compra = precos.iloc[0]["Close"]  # Preço de fechamento D-1
-            preco_venda = precos.iloc[-1]["Open"]   # Preço de abertura D+1
+            # Pega os preços das 11h dos respectivos dias
+            preco_compra = precos.iloc[0]["Open"]  # Preço às 11h do dia da compra
+            preco_venda = precos.iloc[-1]["Open"]  # Preço às 11h do dia da venda
             
             try:
-                # Pega as datas exatas dos preços
-                data_compra_real = precos.iloc[0]["Date"] if not precos.empty else None
-                data_venda_real = precos.iloc[-1]["Date"] if len(precos) > 1 else None
                 
-                if data_compra_real is None or data_venda_real is None:
+                if start_next is None or end_next is None:
                     continue
                 
                 # Calcula retorno percentual do trade
                 retorno_preco = ((preco_venda - preco_compra) / preco_compra) * 100
-                retorno_dividendo = float(evento["dy"])  # Converte para float
-                retorno_total = float(retorno_preco + retorno_dividendo)  # Garante que é float
+                retorno_dividendo = parse_dy(evento["DY"])  # Converte para float
+                retorno_total = parse_dy(retorno_preco + retorno_dividendo)  # Garante que é float
                 
                 resultados.append({
-                    "Ticker": evento["code"],
-                    "DataCom": evento["dataCom"],
-                    "DataCompra": data_compra_real,
-                    "DataVenda": data_venda_real,
-                    "DY": float(evento["dy"]),
-                    "PrecoCompra": round(float(preco_compra), 2),
-                    "PrecoVenda": round(float(preco_venda), 2),
-                    "RetornoPreco(%)": round(float(retorno_preco), 2),
-                    "RetornoDividendo(%)": round(float(retorno_dividendo), 2),
-                    "Retorno(%)": round(float(retorno_total), 2)
+                    "Ticker": evento["Ativo"],
+                    "DataCom": evento["DataCom"],
+                    "DataCompra": start_next,
+                    "DataVenda": end_next,
+                    "DY": parse_dy(evento["DY"]),
+                    "PrecoCompra": round(parse_dy(preco_compra), 2),
+                    "PrecoVenda": round(parse_dy(preco_venda), 2),
+                    "RetornoPreco(%)": round(parse_dy(retorno_preco), 2),
+                    "RetornoDividendo(%)": round(parse_dy(retorno_dividendo), 2),
+                    "Retorno(%)": round(parse_dy(retorno_total), 2)
                 })
             except Exception as e:
-                print(f"[WARN] Erro ao processar {evento['code']}: {e}")
+                print(f"[WARN] Erro ao processar {evento['Ativo']}: {e}")
     
     df_resultado = pd.DataFrame(resultados)
 
@@ -88,3 +85,12 @@ def rank_best_trades(eventos_df):
 
     # Ordena pelo retorno total decrescente
     return df_resultado.sort_values(by="Retorno(%)", ascending=False).reset_index(drop=True)
+
+# Filtra por DY mínimo
+def parse_dy(dy_str):
+    try:
+        if isinstance(dy_str, (int, float)):
+            return float(dy_str)
+        return float(str(dy_str).replace(',', '.'))
+    except (ValueError, TypeError):
+        return 0.0
