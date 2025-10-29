@@ -97,7 +97,7 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
         # Filtra por ativo específico se solicitado
         if stock_filter:
             eventos_raw = [e for e in eventos_raw if e.get('code', '').upper() == stock_filter.upper()]
-        print(len(eventos_raw))
+        # print(len(eventos_raw))
         # Filtra por DY mínimo
         def parse_dy(dy_str):
             try:
@@ -211,7 +211,7 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
             print(f"[WARN] Nenhum dado encontrado para as datas {start_dt.date()} ou {end_dt.date()}")
             return pd.DataFrame()
 
-        print("result", df_dates)
+        # print("result", df_dates)
         # Depois filtra por hora
         df_filtered = df_dates[df_dates.index.hour == 11]
         

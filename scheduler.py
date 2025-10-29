@@ -15,7 +15,7 @@ def schedule_trades(df_trades, allow_overlap=False):
     for _, trade in df_trades.iterrows():
         try:
             data_compra = pd.to_datetime(trade["DataCompra"])
-            print(trade)
+            # print(trade)
             print(f"[DEBUG] Processando trade: Ticker={trade['Ticker']}, DataCom={trade['DataCom']}, DataCompra={data_compra}, DataVenda={trade['DataVenda']}")
             
             # Se permite sobreposição, adiciona todas as operações
@@ -48,12 +48,4 @@ def schedule_trades(df_trades, allow_overlap=False):
             except Exception as e:
                 print(f"[WARN] Erro ao formatar coluna {col}: {e}")
         
-        # Salva os dados agendados em um arquivo CSV
-        try:
-            output_file = "data_cache/scheduled_trades.csv"
-            result.to_csv(output_file, index=False, encoding='utf-8-sig')
-            print(f"[INFO] Dados agendados salvos em: {output_file}")
-        except Exception as e:
-            print(f"[ERRO] Falha ao salvar arquivo CSV: {e}")
-    
     return result
