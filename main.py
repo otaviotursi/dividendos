@@ -6,23 +6,25 @@ from plotter import plot_equity_curve
 
 def main():
     print("=== Estratégia de Dividendos B3 ===")
-    start = "2025-08-01"
-    end = "2025-10-31"
+    start = "2024-01-01"
+    end = "2025-10-28"
+    valor_investido = 1000  # Capital inicial para backtest
 
     print("\n🔍 Buscando eventos de dividendos...")
-    eventos = get_dividend_events(start, end, min_dy=0.7, stock_filter="SANB11")
+    eventos = get_dividend_events(start, end, min_dy=1.1)
     print(f"{len(eventos)} eventos encontrados.")
 
     print("\n📈 Simulando operações...")
-    trades = rank_best_trades(eventos, 2)
+    trades = rank_best_trades(eventos, 2, valor_investido)
+    print("trades", len(trades))
     print(trades.head())
 
     print("\n🧮 Montando cronograma sem sobreposição...")
     agendados = schedule_trades(trades)
-    print(agendados)
+    print("agendados", len(agendados))
 
     print("\n💰 Rodando backtest...")
-    capital_final, hist = run_backtest(agendados)
+    capital_final, hist = run_backtest(agendados,valor_investido)
     print(f"Capital final: R$ {capital_final:.2f}")
 
     plot_equity_curve(hist)

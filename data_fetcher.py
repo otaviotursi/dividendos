@@ -89,15 +89,15 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
             
         # Extrai eventos de todos os tipos (JCP, dividendos, etc)
         eventos_raw = list(chain(
-            response.get('datePayment', []),
-            response.get('dateCom', []),
-            response.get('provisioned', [])
+            # response.get('datePayment', []),
+            response.get('dateCom', [])
+            # ,response.get('provisioned', [])
         ))
         
         # Filtra por ativo específico se solicitado
         if stock_filter:
             eventos_raw = [e for e in eventos_raw if e.get('code', '').upper() == stock_filter.upper()]
-        
+        print(len(eventos_raw))
         # Filtra por DY mínimo
         def parse_dy(dy_str):
             try:
@@ -115,8 +115,9 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
         print("[WARN] Nenhum evento encontrado para o período")
         return pd.DataFrame()
         
-    # Converte para DataFrame
+    # Converte para DataFrame e ordena por dateCom (mais antigo -> mais novo)
     df = pd.DataFrame(all_events)
+    df['dateCom'] = pd.to_datetime(df['dateCom'], format='%d/%m/%Y', dayfirst=True)
     
     # Renomeia colunas para formato mais amigável
     colunas = {
@@ -131,8 +132,15 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
     
     df = df.rename(columns=colunas)
     
-    # Ordena por data ex (DataCom)
-    df = df.sort_values('DataCom')
+    df = df.sort_values('DataCom', ascending=True)
+    
+    # Mostra os eventos ordenados
+    print("\n[INFO] Eventos de dividendos encontrados:")
+    for _, row in df.iterrows():
+        print(f"{row['Ativo']}: {row['DataCom'].strftime('%d/%m/%Y')} - DY: {row['DY']}% - Tipo: {row['Tipo']}")
+    
+    # Converte DataCom de volta para string no formato original
+    df['DataCom'] = df['DataCom'].dt.strftime('%d/%m/%Y')
     
     return df
     
@@ -148,14 +156,35 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
         # Converte as datas de referência para datetime
         start_dt = pd.to_datetime(start_next)
         end_dt = pd.to_datetime(end_next)
-        # Baixa dados do dia inicial
         ticker_obj = yf.Ticker(ticker)
-        print(f"[INFO] Baixando dados de {start_next} para {ticker}...")
-        df_start = ticker_obj.history(start=start_next, end=(start_dt + timedelta(days=1)), interval="1h")
+
+        # Nome dos arquivos de cache
+        cache_start = f'data_cache/price_{ticker}_{start_next}.csv'
+        cache_end = f'data_cache/price_{ticker}_{end_next}.csv'
         
-        # Baixa dados do dia final
-        print(f"[INFO] Baixando dados de {end_next} para {ticker}...")
-        df_end = ticker_obj.history(start=end_next, end=(end_dt + timedelta(days=1)), interval="1h")
+        # Tenta carregar dados iniciais do cache
+        if os.path.exists(cache_start):
+            print(f"[INFO] Usando dados em cache para {ticker} em {start_next}")
+            df_start = pd.read_csv(cache_start, index_col=0, parse_dates=True)
+        else:
+            print(f"[INFO] Baixando dados de {start_next} para {ticker}...")
+            df_start = ticker_obj.history(start=start_next, end=(start_dt + timedelta(days=1)), interval="1h")
+            # Salva no cache
+            os.makedirs('data_cache', exist_ok=True)
+            df_start.to_csv(cache_start)
+            print(f"[INFO] Dados salvos em cache: {cache_start}")
+        
+        # Tenta carregar dados finais do cache
+        if os.path.exists(cache_end):
+            print(f"[INFO] Usando dados em cache para {ticker} em {end_next}")
+            df_end = pd.read_csv(cache_end, index_col=0, parse_dates=True)
+        else:
+            print(f"[INFO] Baixando dados de {end_next} para {ticker}...")
+            df_end = ticker_obj.history(start=end_next, end=(end_dt + timedelta(days=1)), interval="1h")
+            # Salva no cache
+            os.makedirs('data_cache', exist_ok=True)
+            df_end.to_csv(cache_end)
+            print(f"[INFO] Dados salvos em cache: {cache_end}")
         
         # Combina os resultados
         df = pd.concat([df_start, df_end])
@@ -171,9 +200,6 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
         
         # Debug: Mostra as datas e horas disponíveis
         print(f"[DEBUG] Datas buscadas: start={start_dt.date()}, end={end_dt.date()}")
-        print(f"[DEBUG] Horas disponíveis para {ticker}:")
-        for idx in df.index:
-            print(f"Data: {idx.date()}, Hora: {idx.hour}")
 
         # Filtra primeiro por data
         df_dates = df[
@@ -185,6 +211,7 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
             print(f"[WARN] Nenhum dado encontrado para as datas {start_dt.date()} ou {end_dt.date()}")
             return pd.DataFrame()
 
+        print("result", df_dates)
         # Depois filtra por hora
         df_filtered = df_dates[df_dates.index.hour == 11]
         

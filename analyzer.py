@@ -4,10 +4,10 @@ from datetime import datetime, timedelta
 from data_fetcher import get_price_history
 from date_extensions import ajustar_periodos
 
-def rank_best_trades(eventos_df,days_offset):
+def rank_best_trades(eventos_df,days_offset,valor_investido):
     """
     Recebe um DataFrame com os eventos e retorna um DataFrame com os melhores trades,
-    filtrando DY >= 0.7 e calculando o retorno total (preço + dividendo).
+    filtrando DY >= days_offset e calculando o retorno total (preço + dividendo).
     """
     if eventos_df.empty:
         print("[WARN] Nenhum evento para processar.")
@@ -49,11 +49,17 @@ def rank_best_trades(eventos_df,days_offset):
                 if start_next is None or end_next is None:
                     continue
                 
-                # Calcula retorno percentual do trade
+                # Calcula retornos percentuais
                 retorno_preco = ((preco_venda - preco_compra) / preco_compra) * 100
                 retorno_dividendo = parse_dy(evento["DY"])  # Converte para float
                 retorno_total = parse_dy(retorno_preco + retorno_dividendo)  # Garante que é float
                 
+                # Calcula valores em reais (R$)
+                retorno_preco_reais = valor_investido * (parse_dy(retorno_preco) / 100)
+                retorno_dividendo_reais = valor_investido * (parse_dy(evento["DY"]) / 100)
+                retorno_total_reais = retorno_preco_reais + retorno_dividendo_reais
+                valor_total = valor_investido + retorno_total_reais
+
                 resultados.append({
                     "Ticker": evento["Ativo"],
                     "DataCom": evento["DataCom"],
@@ -63,8 +69,15 @@ def rank_best_trades(eventos_df,days_offset):
                     "PrecoCompra": round(parse_dy(preco_compra), 2),
                     "PrecoVenda": round(parse_dy(preco_venda), 2),
                     "RetornoPreco(%)": round(parse_dy(retorno_preco), 2),
+                    "RetornoPreco(R$)": round(retorno_preco_reais, 2),
                     "RetornoDividendo(%)": round(parse_dy(retorno_dividendo), 2),
-                    "Retorno(%)": round(parse_dy(retorno_total), 2)
+                    "RetornoDividendo(R$)": round(retorno_dividendo_reais, 2),
+                    "Retorno(%)": round(parse_dy(retorno_total), 2),
+                    "Retorno(R$)": round(retorno_total_reais, 2),
+                    "ValorInvestido(R$)": round(valor_investido, 2),
+                    "ValorTotal(R$)": round(valor_total, 2),
+                    "Valor": parse_dy(evento.get("Valor", 0)),
+                    "Tipo": evento.get("Tipo", "")
                 })
             except Exception as e:
                 print(f"[WARN] Erro ao processar {evento['Ativo']}: {e}")
@@ -82,9 +95,9 @@ def rank_best_trades(eventos_df,days_offset):
 
     # Remove linhas com valores nulos
     df_resultado = df_resultado.dropna()
-
+    return df_resultado
     # Ordena pelo retorno total decrescente
-    return df_resultado.sort_values(by="Retorno(%)", ascending=False).reset_index(drop=True)
+    # return df_resultado.sort_values(by="Retorno(%)", ascending=False).reset_index(drop=True)
 
 # Filtra por DY mínimo
 def parse_dy(dy_str):

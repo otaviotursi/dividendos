@@ -1,18 +1,36 @@
 import pandas as pd
 
-def schedule_trades(df_trades):
-    """Seleciona operações sem sobreposição de datas."""
-    df_trades = df_trades.sort_values(by="DataCom")
+def schedule_trades(df_trades, allow_overlap=False):
+    """
+    Seleciona operações com base nas datas.
+    
+    Args:
+        df_trades: DataFrame com as operações
+        allow_overlap: Se True, permite sobreposição de datas. Se False, 
+                      garante que uma operação só começa após o término da anterior.
+    """
     selected = []
     last_sell_date = None
 
     for _, trade in df_trades.iterrows():
-        # Converte datas para datetime, lidando com diferentes formatos possíveis
         try:
             data_compra = pd.to_datetime(trade["DataCompra"])
-            if last_sell_date is None or data_compra > last_sell_date:
+            print(trade)
+            print(f"[DEBUG] Processando trade: Ticker={trade['Ticker']}, DataCom={trade['DataCom']}, DataCompra={data_compra}, DataVenda={trade['DataVenda']}")
+            
+            # Se permite sobreposição, adiciona todas as operações
+            # Se não permite, verifica se a data de compra é posterior à última venda
+            if allow_overlap or last_sell_date is None or data_compra > last_sell_date:
                 selected.append(trade)
                 last_sell_date = pd.to_datetime(trade["DataVenda"])
+                
+                if allow_overlap:
+                    print(f"[INFO] Trade adicionado (sobreposição permitida)")
+                else:
+                    print(f"[INFO] Trade adicionado (sem sobreposição)")
+            else:
+                print(f"[INFO] Trade ignorado: data de compra {data_compra.strftime('%d/%m/%Y')} sobrepõe com venda anterior em {last_sell_date.strftime('%d/%m/%Y')}")
+        
         except Exception as e:
             print(f"[WARN] Erro ao processar datas do trade: {e}")
             continue

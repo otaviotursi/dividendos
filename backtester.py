@@ -1,4 +1,4 @@
-def run_backtest(trades_df, capital_inicial=1000):
+def run_backtest(trades_df, capital_inicial):
     capital = capital_inicial
     historico = []
 
