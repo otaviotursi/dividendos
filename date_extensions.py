@@ -35,14 +35,15 @@ def ajustar_para_dia_util(data, mover_para_frente=True):
     
     return data
 
-def ajustar_periodos(start, end, days_offset):
+def ajustar_periodos(start, end, days_before, days_after):
     """
     Ajusta as datas de início e fim considerando dias úteis e feriados.
     
     Args:
         start: Data inicial
         end: Data final
-        days_offset: Número de dias para ajuste antes/depois
+        days_before: Número de dias para ajuste antes da data ex
+        days_after: Número de dias para ajuste depois da data ex
     
     Returns:
         Tupla com (data_inicio, data_inicio_ajustada, data_fim, data_fim_ajustada)
@@ -56,8 +57,8 @@ def ajustar_periodos(start, end, days_offset):
     end_day = end_dt.strftime('%Y-%m-%d')
 
     # Aplica offsets
-    start_next = start_dt - timedelta(days=days_offset)
-    end_next = end_dt + timedelta(days=days_offset)
+    start_next = start_dt - timedelta(days=days_before)
+    end_next = end_dt + timedelta(days=days_after)
 
     # Ajusta para dias úteis considerando feriados:
     # - start_next: mover para dia útil anterior

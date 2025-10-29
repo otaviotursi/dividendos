@@ -4,10 +4,16 @@ from datetime import datetime, timedelta
 from data_fetcher import get_price_history
 from date_extensions import ajustar_periodos
 
-def rank_best_trades(eventos_df,days_offset,valor_investido):
+def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
     """
     Recebe um DataFrame com os eventos e retorna um DataFrame com os melhores trades,
-    filtrando DY >= days_offset e calculando o retorno total (preço + dividendo).
+    calculando o retorno total (preço + dividendo).
+    
+    Args:
+        eventos_df: DataFrame com eventos de dividendos
+        days_before: Número de dias úteis antes da data ex para compra
+        days_after: Número de dias úteis depois da data ex para venda
+        valor_investido: Valor inicial para investimento
     """
     if eventos_df.empty:
         print("[WARN] Nenhum evento para processar.")
@@ -34,7 +40,7 @@ def rank_best_trades(eventos_df,days_offset,valor_investido):
                 print(f"[WARN] Erro ao processar data para {evento['Ativo']}: {e}")
                 continue
             
-        start_day, start_next, end_day, end_next = ajustar_periodos(data_com, data_com, days_offset)
+        start_day, start_next, end_day, end_next = ajustar_periodos(data_com, data_com, days_before, days_after)
 
         # Busca preços
         precos = get_price_history(ticker, start_day, start_next, end_day, end_next)

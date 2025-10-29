@@ -8,7 +8,8 @@ from file_utils import save_trades_to_csv
 def main():
     # Parâmetros configuráveis
     min_dy = 0.7  # DY mínimo
-    days_offset = 7  # Dias antes/depois para compra/venda
+    days_before = 5  # Dias antes da data ex para compra
+    days_after = 3  # Dias depois da data ex para venda
     allow_overlap = False  # Se permite sobreposição de datas
     valor_investido = 1000  # Capital inicial para backtest
 
@@ -21,7 +22,7 @@ def main():
     print(f"{len(eventos)} eventos encontrados.")
 
     print("\n📈 Simulando operações...")
-    trades = rank_best_trades(eventos, days_offset,valor_investido)
+    trades = rank_best_trades(eventos, days_before, days_after, valor_investido)
     print("trades", len(trades))
     # print(trades.head())
 
@@ -30,7 +31,7 @@ def main():
     print("agendados", len(agendados))
 
     # Salva os trades agendados em CSV com nome personalizado
-    output_file = save_trades_to_csv(agendados, min_dy, days_offset, allow_overlap)
+    output_file = save_trades_to_csv(agendados, min_dy, days_before, days_after, allow_overlap)
     if output_file:
         print(f"💾 Trades salvos em: {output_file}")
 
