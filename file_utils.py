@@ -21,7 +21,7 @@ def save_trades_to_csv(df, min_dy, days_before, days_after, allow_overlap):
         output_file = f"trades/trades_dy{min_dy}_diasAntes{days_before}_diasDepois{days_after}_{overlap_str}.csv"
         
         # Salva o DataFrame
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        df.to_csv(output_file, index=False, sep=';', encoding='utf-8-sig')
         print(f"[INFO] Dados salvos em: {output_file}")
         
         return output_file

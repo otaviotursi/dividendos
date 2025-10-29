@@ -6,10 +6,10 @@ from plotter import plot_equity_curve
 from file_utils import save_trades_to_csv
 
 def run_strategy(
-    min_dy=0.7,          # DY mínimo
-    days_before=5,       # Dias antes da data ex para compra
-    days_after=3,        # Dias depois da data ex para venda
-    allow_overlap=False, # Se permite sobreposição de datas
+    min_dy=1.3,          # DY mínimo
+    days_before=15,       # Dias antes da data ex para compra
+    days_after=20,        # Dias depois da data ex para venda
+    allow_overlap=True, # Se permite sobreposição de datas
     valor_investido=1000,# Capital inicial para backtest
     start="2024-01-01", # Data inicial
     end="2025-10-28",   # Data final
@@ -33,7 +33,8 @@ def run_strategy(
 
     if verbose:
         print("\n🔍 Buscando eventos de dividendos...")
-    eventos = get_dividend_events(start, end, min_dy=min_dy, stock_filter="TOTS3")
+    eventos = get_dividend_events(start, end, min_dy=min_dy)
+    # eventos = get_dividend_events(start, end, min_dy=min_dy, stock_filter="TOTS3")
     if verbose:
         print(f"{len(eventos)} eventos encontrados.")
 

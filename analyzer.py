@@ -28,6 +28,7 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
     
     # Calcula retornos baseados nos preços reais
     resultados = []
+    capital = valor_investido
     for _, evento in df.iterrows():
         ticker = evento["Ativo"] + ".SA"  # Adiciona sufixo do Yahoo Finance
         try:
@@ -61,7 +62,10 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
                 retorno_dividendo_reais = valor_investido * (parse_dy(evento["DY"]) / 100)
                 retorno_total_reais = retorno_preco_reais + retorno_dividendo_reais
                 valor_total = valor_investido + retorno_total_reais
-
+                
+                retorno_monetario = (capital * retorno_total) / 100
+                capital += retorno_monetario
+                
                 resultados.append({
                     "Ticker": evento["Ativo"],
                     "DataCom": evento["DataCom"],
@@ -79,7 +83,8 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
                     "ValorInvestido(R$)": round(valor_investido, 2),
                     "ValorTotal(R$)": round(valor_total, 2),
                     "Valor": parse_dy(evento.get("Valor", 0)),
-                    "Tipo": evento.get("Tipo", "")
+                    "Tipo": evento.get("Tipo", ""),
+                    "Capital": round(capital, 2)
                 })
             except Exception as e:
                 print(f"[WARN] Erro ao processar {evento['Ativo']}: {e}")
