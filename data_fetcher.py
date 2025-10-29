@@ -162,14 +162,25 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
         cache_start = f'data_cache/price_{ticker}_{start_next}.csv'
         cache_end = f'data_cache/price_{ticker}_{end_next}.csv'
         
+        def process_dataframe(df):
+            if not df.empty:
+                # Converte índice para datetime se necessário
+                if not isinstance(df.index, pd.DatetimeIndex):
+                    df.index = pd.to_datetime(df.index)
+                # Remove timezone info imediatamente
+                df.index = df.index.tz_localize(None)
+            return df
+
         # Tenta carregar dados iniciais do cache
         if os.path.exists(cache_start):
             print(f"[INFO] Usando dados em cache para {ticker} em {start_next}")
             df_start = pd.read_csv(cache_start, index_col=0, parse_dates=True)
+            df_start = process_dataframe(df_start)
         else:
             print(f"[INFO] Baixando dados de {start_next} para {ticker}...")
             df_start = ticker_obj.history(start=start_next, end=(start_dt + timedelta(days=1)), interval="1h")
-            # Salva no cache
+            df_start = process_dataframe(df_start)
+            # Salva no cache (já com timezone removido)
             os.makedirs('data_cache', exist_ok=True)
             df_start.to_csv(cache_start)
             print(f"[INFO] Dados salvos em cache: {cache_start}")
@@ -178,10 +189,12 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
         if os.path.exists(cache_end):
             print(f"[INFO] Usando dados em cache para {ticker} em {end_next}")
             df_end = pd.read_csv(cache_end, index_col=0, parse_dates=True)
+            df_end = process_dataframe(df_end)
         else:
             print(f"[INFO] Baixando dados de {end_next} para {ticker}...")
             df_end = ticker_obj.history(start=end_next, end=(end_dt + timedelta(days=1)), interval="1h")
-            # Salva no cache
+            df_end = process_dataframe(df_end)
+            # Salva no cache (já com timezone removido)
             os.makedirs('data_cache', exist_ok=True)
             df_end.to_csv(cache_end)
             print(f"[INFO] Dados salvos em cache: {cache_end}")
@@ -204,15 +217,17 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
             print(f"[WARN] Nenhum dado disponível para {ticker} após processamento.")
             return pd.DataFrame()
         
-        # Converte o índice para datetime se necessário
+        # Converte o índice para datetime UTC e depois para horário local
         if not isinstance(df.index, pd.DatetimeIndex):
             df.index = pd.to_datetime(df.index)
-            
         
+        # Converte timezone-aware para timezone-naive removendo o fuso horário
+        df.index = df.index.tz_localize(None)
+            
         # Debug: Mostra as datas e horas disponíveis
         print(f"[DEBUG] Datas buscadas: start={start_dt.date()}, end={end_dt.date()}")
 
-        # Filtra primeiro por data
+        # Filtra primeiro por data, convertendo para date para comparação
         df_dates = df[
             (df.index.date == start_dt.date()) | 
             (df.index.date == end_dt.date())
@@ -223,7 +238,7 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
             return pd.DataFrame()
 
         # print("result", df_dates)
-        # Depois filtra por hora
+        # Depois filtra por hora (11h no horário local)
         df_filtered = df_dates[df_dates.index.hour == 11]
         
         if len(df_filtered) < 2:
@@ -235,6 +250,8 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
             for target_date in [start_dt.date(), end_dt.date()]:
                 day_data = df_dates[df_dates.index.date == target_date]
                 if not day_data.empty:
+                    # Remove timezone info se presente
+                    day_data.index = day_data.index.tz_localize(None)
                     # Pega o horário mais próximo de 11h
                     hour_diff = abs(day_data.index.hour - 11)
                     closest_time = day_data.iloc[hour_diff.argmin()]
@@ -255,4 +272,17 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
             
     except Exception as e:
         print(f"[ERRO] Falha ao acessar dados para {ticker}: {e}")
+        print("[DEBUG] Detalhes do erro:")
+        print(f"- Tipo do erro: {type(e).__name__}")
+        print(f"- Datas requisitadas: {start_next} -> {end_next}")
+        try:
+            if 'df' in locals():
+                print(f"- DataFrame possui dados: {'Sim' if not df.empty else 'Não'}")
+                if not df.empty:
+                    print(f"- Tipo do índice: {type(df.index)}")
+                    print(f"- Timezone do índice: {df.index.tz if hasattr(df.index, 'tz') else 'None'}")
+                    print("- Primeiros registros disponíveis:")
+                    print(df.head())
+        except Exception as debug_e:
+            print(f"[WARN] Erro ao coletar informações de debug: {debug_e}")
         return pd.DataFrame()

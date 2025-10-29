@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from data_fetcher import get_price_history
 from date_extensions import ajustar_periodos
+from date_utils import parse_date
 
 def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
     """
@@ -30,15 +31,10 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
     for _, evento in df.iterrows():
         ticker = evento["Ativo"] + ".SA"  # Adiciona sufixo do Yahoo Finance
         try:
-            # Converte a data considerando formato brasileiro
-            data_com = pd.to_datetime(evento["DataCom"], format="%d/%m/%Y", dayfirst=True)
+            data_com = parse_date(evento["DataCom"])
         except Exception as e:
-            try:
-                # Tenta formato alternativo caso a data já esteja em outro formato
-                data_com = pd.to_datetime(evento["DataCom"])
-            except Exception as e:
-                print(f"[WARN] Erro ao processar data para {evento['Ativo']}: {e}")
-                continue
+            print(f"[WARN] Erro ao processar data para {evento['Ativo']}: {e}")
+            continue
             
         start_day, start_next, end_day, end_next = ajustar_periodos(data_com, data_com, days_before, days_after)
 

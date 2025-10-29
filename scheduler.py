@@ -1,4 +1,5 @@
 import pandas as pd
+from date_utils import parse_date
 
 def schedule_trades(df_trades, allow_overlap=False):
     """
@@ -14,15 +15,14 @@ def schedule_trades(df_trades, allow_overlap=False):
 
     for _, trade in df_trades.iterrows():
         try:
-            data_compra = pd.to_datetime(trade["DataCompra"])
-            # print(trade)
+            data_compra = parse_date(trade["DataCompra"])
             print(f"[DEBUG] Processando trade: Ticker={trade['Ticker']}, DataCom={trade['DataCom']}, DataCompra={data_compra}, DataVenda={trade['DataVenda']}")
             
             # Se permite sobreposição, adiciona todas as operações
             # Se não permite, verifica se a data de compra é posterior à última venda
             if allow_overlap or last_sell_date is None or data_compra > last_sell_date:
                 selected.append(trade)
-                last_sell_date = pd.to_datetime(trade["DataVenda"])
+                last_sell_date = parse_date(trade["DataVenda"])
                 
                 if allow_overlap:
                     print(f"[INFO] Trade adicionado (sobreposição permitida)")
@@ -41,10 +41,7 @@ def schedule_trades(df_trades, allow_overlap=False):
     if not result.empty:
         for col in ["DataCom", "DataCompra", "DataVenda"]:
             try:
-                # Primeiro converte para datetime (aceita vários formatos)
-                datas = pd.to_datetime(result[col])
-                # Depois formata para o padrão brasileiro
-                result[col] = datas
+                result[col] = result[col].apply(parse_date)
             except Exception as e:
                 print(f"[WARN] Erro ao formatar coluna {col}: {e}")
         
