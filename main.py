@@ -8,7 +8,7 @@ from file_utils import save_trades_to_csv
 def main():
     # Parâmetros configuráveis
     min_dy = 0.7  # DY mínimo
-    days_offset = 2  # Dias antes/depois para compra/venda
+    days_offset = 7  # Dias antes/depois para compra/venda
     allow_overlap = False  # Se permite sobreposição de datas
     valor_investido = 1000  # Capital inicial para backtest
 

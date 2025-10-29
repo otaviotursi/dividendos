@@ -186,11 +186,22 @@ def get_price_history(ticker, start_day, start_next, end_day, end_next):
             df_end.to_csv(cache_end)
             print(f"[INFO] Dados salvos em cache: {cache_end}")
         
-        # Combina os resultados
-        df = pd.concat([df_start, df_end])
-        
-        if df.empty:
+        # Verifica cada DataFrame individualmente
+        if df_start.empty and df_end.empty:
             print(f"[WARN] Nenhum dado disponível para {ticker}.")
+            return pd.DataFrame()
+        elif df_start.empty:
+            print(f"[INFO] Usando apenas dados do dia final para {ticker}")
+            df = df_end
+        elif df_end.empty:
+            print(f"[INFO] Usando apenas dados do dia inicial para {ticker}")
+            df = df_start
+        else:
+            # Se ambos têm dados, concatena
+            df = pd.concat([df_start, df_end])
+            
+        if df.empty:
+            print(f"[WARN] Nenhum dado disponível para {ticker} após processamento.")
             return pd.DataFrame()
         
         # Converte o índice para datetime se necessário
