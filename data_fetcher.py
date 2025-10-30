@@ -93,7 +93,15 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
             response.get('dateCom', [])
             # ,response.get('provisioned', [])
         ))
-        
+
+        # ajusta JCP para valor líquido (85%)
+        for e in eventos_raw:
+            tipo = e.get("earningType", "").upper()
+            if tipo == "JCP":
+                valor_bruto = float(str(e.get("resultAbsoluteValue", "0")).replace(",", "."))
+                e["resultAbsoluteValue"] = round(valor_bruto * 0.85, 8)
+
+        # remove o q é Rend. Tributado
         eventos_raw = [e for e in eventos_raw if e.get("earningType") != "Rend. Tributado"]
 
         # Filtra por ativo específico se solicitado

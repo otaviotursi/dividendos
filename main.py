@@ -57,7 +57,7 @@ def run_strategy(
 
     if verbose:
         print("\n💰 Rodando backtest...")
-    capital_final, hist = run_backtest(agendados, verbose)
+    capital_final, hist = run_backtest(agendados, verbose, valor_investido)
     if verbose:
         print(f"Capital final: R$ {capital_final:.2f}")
         plot_equity_curve(hist)

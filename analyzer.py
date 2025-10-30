@@ -27,8 +27,9 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
     
     # Calcula retornos baseados nos preços reais
     resultados = []
-    capital = valor_investido
+    print(df.head())
     for _, evento in df.iterrows():
+        # print(f"[DEBUG] Processando evento: {evento['Ativo']} - DataCom: {evento['DataCom']} | {evento}")
         ticker = evento["Ativo"] + ".SA"  # Adiciona sufixo do Yahoo Finance
         try:
             data_com = parse_date(evento["DataCom"])
@@ -40,6 +41,7 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
 
         # Busca preços
         precos = get_price_history(ticker, start_day, start_next, end_day, end_next)
+        # print(f"[DEBUG] Preços obtidos para {ticker} de {start_day} a {end_next}: {precos}")
         
         if not precos.empty and len(precos) >= 2:
             # Pega os preços das 11h dos respectivos dias
@@ -64,8 +66,7 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
                 retorno_total_reais = retorno_preco_reais_total + retorno_dividendo_reais_total
                 valor_total = valor_investido + retorno_total_reais
                 
-                capital += retorno_total_reais
-                
+                print(f"[DEBUG] Trade {evento['Ativo']}: Retorno {retorno_total_porcentagem}% => R$ {retorno_total_reais:.2f}")
                 resultados.append({
                     "Ticker": evento["Ativo"],
                     "DataCom": evento["DataCom"],
@@ -87,7 +88,6 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
                     "ValorTotal(R$)": round(valor_total, 2),
                     "Valor": parse_dy(evento.get("Valor", 0)),
                     "Tipo": evento.get("Tipo", ""),
-                    "Capital": round(capital, 2)
                 })
             except Exception as e:
                 print(f"[WARN] Erro ao processar {evento['Ativo']}: {e}")
