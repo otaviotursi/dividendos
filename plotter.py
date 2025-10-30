@@ -18,8 +18,8 @@ def plot_equity_curve(historico):
     bar_width = 0.35
     x = range(len(df))
     
-    ax2.bar(x, df["RetornoPreco(%)"], bar_width, label="Retorno Preço", color="orange")
-    ax2.bar([i + bar_width for i in x], df["RetornoDividendo(%)"], bar_width, label="Retorno Dividendo", color="green")
+    ax2.bar(x, df["RetornoValorizacaoTotal(%)"], bar_width, label="Retorno Preço", color="orange")
+    ax2.bar([i + bar_width for i in x], df["RetornoDividendoTotal(%)"], bar_width, label="Retorno Dividendo", color="green")
     
     ax2.set_title("Composição dos Retornos por Trade")
     ax2.set_xlabel("Trades")

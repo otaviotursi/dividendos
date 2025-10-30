@@ -2,8 +2,7 @@
 import pandas as pd
 from datetime import datetime, timedelta
 from data_fetcher import get_price_history
-from date_extensions import ajustar_periodos
-from date_utils import parse_date
+from date_extensions import ajustar_periodos,parse_date
 
 def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
     """
@@ -18,13 +17,13 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
     """
     if eventos_df.empty:
         print("[WARN] Nenhum evento para processar.")
-        return pd.DataFrame(columns=["Ticker", "DataCom", "DY", "PrecoCompra", "PrecoVenda", "RetornoPreco(%)", "RetornoDividendo(%)", "Retorno(%)"])
+        return pd.DataFrame(columns=["Ticker", "DataCom", "DY", "PrecoCompra", "PrecoVenda", "RetornoValorizacaoTotal(%)", "RetornoDividendoTotal(%)", "Retorno(%)"])
 
     df = eventos_df.copy()
 
     if df.empty:
         print("[WARN] Nenhum evento encontrado com DY >= maior que o setado.")
-        return pd.DataFrame(columns=["Ticker", "DataCom", "DY", "PrecoCompra", "PrecoVenda", "RetornoPreco(%)", "RetornoDividendo(%)", "Retorno(%)"])
+        return pd.DataFrame(columns=["Ticker", "DataCom", "DY", "PrecoCompra", "PrecoVenda", "RetornoValorizacaoTotal(%)", "RetornoDividendoTotal(%)", "Retorno(%)"])
     
     # Calcula retornos baseados nos preços reais
     resultados = []
@@ -53,18 +52,19 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
                     continue
                 
                 # Calcula retornos percentuais
-                retorno_preco = ((preco_venda - preco_compra) / preco_compra) * 100
-                retorno_dividendo = parse_dy(evento["DY"])  # Converte para float
-                retorno_total = parse_dy(retorno_preco + retorno_dividendo)  # Garante que é float
+                retorno_preco_porcentagem = ((preco_venda - preco_compra) / preco_compra) * 100
+                retorno_dividendo_porcentagem = parse_dy(evento["DY"])  # Converte para float
+                retorno_total_porcentagem = parse_dy(retorno_preco_porcentagem + retorno_dividendo_porcentagem)  # Garante que é float
                 
                 # Calcula valores em reais (R$)
-                retorno_preco_reais = valor_investido * (parse_dy(retorno_preco) / 100)
-                retorno_dividendo_reais = valor_investido * (parse_dy(evento["DY"]) / 100)
-                retorno_total_reais = retorno_preco_reais + retorno_dividendo_reais
+                retorno_preco = (preco_venda - preco_compra)
+                retorno_preco_reais_total = valor_investido * (parse_dy(retorno_preco_porcentagem) / 100)
+                retorno_dividendo_reais = parse_dy(evento["ValorDividendo"])  # Converte para float
+                retorno_dividendo_reais_total = (valor_investido / parse_dy(preco_compra) ) * parse_dy(evento["ValorDividendo"])  # Converte para float
+                retorno_total_reais = retorno_preco_reais_total + retorno_dividendo_reais_total
                 valor_total = valor_investido + retorno_total_reais
                 
-                retorno_monetario = (capital * retorno_total) / 100
-                capital += retorno_monetario
+                capital += retorno_total_reais
                 
                 resultados.append({
                     "Ticker": evento["Ativo"],
@@ -72,13 +72,16 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
                     "DataCompra": start_next,
                     "DataVenda": end_next,
                     "DY": parse_dy(evento["DY"]),
+                    "ValorDividendo": parse_dy(evento["ValorDividendo"]),
                     "PrecoCompra": round(parse_dy(preco_compra), 2),
                     "PrecoVenda": round(parse_dy(preco_venda), 2),
-                    "RetornoPreco(%)": round(parse_dy(retorno_preco), 2),
-                    "RetornoPreco(R$)": round(retorno_preco_reais, 2),
-                    "RetornoDividendo(%)": round(parse_dy(retorno_dividendo), 2),
-                    "RetornoDividendo(R$)": round(retorno_dividendo_reais, 2),
-                    "Retorno(%)": round(parse_dy(retorno_total), 2),
+                    "RetornoValorizacaoTotal(%)": round(parse_dy(retorno_preco_porcentagem), 2),
+                    "RetornoValorizacaoTotal(R$)": round(retorno_preco_reais_total, 2),
+                    "RetornoValorizacaoPorAcao(R$)": round(retorno_preco, 2),
+                    "RetornoDividendoTotal(%)": round(parse_dy(retorno_dividendo_porcentagem), 2),
+                    "RetornoDividendoTotal(R$)": round(retorno_dividendo_reais_total, 2),
+                    "RetornoDividendoPorAcao(R$)": round(retorno_dividendo_reais, 2),
+                    "Retorno(%)": round(parse_dy(retorno_total_porcentagem), 2),
                     "Retorno(R$)": round(retorno_total_reais, 2),
                     "ValorInvestido(R$)": round(valor_investido, 2),
                     "ValorTotal(R$)": round(valor_total, 2),
@@ -93,10 +96,10 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
 
     if df_resultado.empty:
         print("[WARN] Nenhum trade válido encontrado.")
-        return pd.DataFrame(columns=["Ticker", "Data", "DY", "PrecoCompra", "PrecoVenda", "RetornoPreco(%)", "RetornoDividendo(%)", "Retorno(%)"])
+        return pd.DataFrame(columns=["Ticker", "Data", "DY", "PrecoCompra", "PrecoVenda", "RetornoValorizacaoTotal(%)", "RetornoDividendoTotal(%)", "Retorno(%)"])
 
     # Converte todas as colunas numéricas para float
-    colunas_numericas = ["DY", "PrecoCompra", "PrecoVenda", "RetornoPreco(%)", "RetornoDividendo(%)", "Retorno(%)"]
+    colunas_numericas = ["DY", "PrecoCompra", "PrecoVenda", "RetornoValorizacaoTotal(%)", "RetornoDividendoTotal(%)", "Retorno(%)"]
     for coluna in colunas_numericas:
         df_resultado[coluna] = pd.to_numeric(df_resultado[coluna], errors='coerce')
 

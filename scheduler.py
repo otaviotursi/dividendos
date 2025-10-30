@@ -1,5 +1,5 @@
 import pandas as pd
-from date_utils import parse_date
+from date_extensions import parse_date
 
 def schedule_trades(df_trades, allow_overlap=False):
     """

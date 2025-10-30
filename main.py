@@ -6,12 +6,12 @@ from plotter import plot_equity_curve
 from file_utils import save_trades_to_csv
 
 def run_strategy(
-    min_dy=1.3,          # DY mínimo
-    days_before=15,       # Dias antes da data ex para compra
+    min_dy=1.5,          # DY mínimo
+    days_before=20,       # Dias antes da data ex para compra
     days_after=20,        # Dias depois da data ex para venda
     allow_overlap=True, # Se permite sobreposição de datas
     valor_investido=1000,# Capital inicial para backtest
-    start="2024-01-01", # Data inicial
+    start="2023-10-26", # Data inicial
     end="2025-10-28",   # Data final
     verbose=True        # Se deve imprimir mensagens de progresso
 ):
@@ -57,7 +57,7 @@ def run_strategy(
 
     if verbose:
         print("\n💰 Rodando backtest...")
-    capital_final, hist = run_backtest(agendados, valor_investido)
+    capital_final, hist = run_backtest(agendados, verbose)
     if verbose:
         print(f"Capital final: R$ {capital_final:.2f}")
         plot_equity_curve(hist)

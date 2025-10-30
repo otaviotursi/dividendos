@@ -94,9 +94,12 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
             # ,response.get('provisioned', [])
         ))
         
+        eventos_raw = [e for e in eventos_raw if e.get("earningType") != "Rend. Tributado"]
+
         # Filtra por ativo específico se solicitado
         if stock_filter:
             eventos_raw = [e for e in eventos_raw if e.get('code', '').upper() == stock_filter.upper()]
+        
         # print(len(eventos_raw))
         # Filtra por DY mínimo
         def parse_dy(dy_str):
@@ -124,6 +127,7 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
         'code': 'Ativo',
         'value': 'Valor',
         'dy': 'DY',
+        'resultAbsoluteValue': 'ValorDividendo',
         'dateCom': 'DataCom',
         'datePayment': 'DataPagamento',
         'dateApproval': 'DataAprovacao',

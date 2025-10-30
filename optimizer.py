@@ -57,7 +57,7 @@ def save_result(filename, result):
         print(f"[ERRO] Falha ao salvar resultado: {e}")
 
 
-def run_optimization(start_date="2024-01-01", end_date="2025-10-28"):
+def run_optimization(start_date="2023-10-26", end_date="2024-01-01"):
     """Executa a otimização testando várias combinações de parâmetros"""
     print("=== Otimização de Parâmetros ===")
 
