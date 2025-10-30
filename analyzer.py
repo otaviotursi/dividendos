@@ -27,7 +27,7 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
     
     # Calcula retornos baseados nos preços reais
     resultados = []
-    print(df.head())
+    # print(df.head())
     for _, evento in df.iterrows():
         # print(f"[DEBUG] Processando evento: {evento['Ativo']} - DataCom: {evento['DataCom']} | {evento}")
         ticker = evento["Ativo"] + ".SA"  # Adiciona sufixo do Yahoo Finance
