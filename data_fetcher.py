@@ -8,6 +8,7 @@ import json
 import yfinance as yf
 
 from date_extensions import ajustar_periodos
+from collections import defaultdict
 
 def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=None):
     """
@@ -89,26 +90,79 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
             
         # Extrai eventos de todos os tipos (JCP, dividendos, etc)
         eventos_raw = list(chain(
-            # response.get('datePayment', []),
             response.get('dateCom', [])
-            # ,response.get('provisioned', [])
         ))
 
-        # ajusta JCP para valor líquido (85%)
+        # 🔹 Ajuste de 15% para JCP (valor líquido)
         for e in eventos_raw:
             tipo = e.get("earningType", "").upper()
             if tipo == "JCP":
-                valor_bruto = float(str(e.get("resultAbsoluteValue", "0")).replace(",", "."))
-                e["resultAbsoluteValue"] = round(valor_bruto * 0.85, 8)
+                try:
+                    valor_bruto = float(str(e.get("resultAbsoluteValue", "0")).replace(",", "."))
+                    e["resultAbsoluteValue"] = round(valor_bruto * 0.85, 8)
+                except Exception:
+                    pass
 
-        # remove o q é Rend. Tributado
-        eventos_raw = [e for e in eventos_raw if e.get("earningType") != "Rend. Tributado"]
+        # 🔹 Remove "Rend. Tributado"
+        eventos_raw = [e for e in eventos_raw if e.get("earningType", "").lower() != "rend. tributado"]
+
+        # 🔹 Consolidação de eventos com mesmo code + dateCom
+        grupos = defaultdict(list)
+        for e in eventos_raw:
+            chave = (e.get("code"), e.get("dateCom"))
+            grupos[chave].append(e)
+
+        eventos_consolidados = []
+
+        for (code, dateCom), eventos in grupos.items():
+            soma_dy = 0.0
+            soma_valor = 0.0
+            ultima_data_pagamento = None
+            ultima_data_aprovacao = None
+            for e in eventos:
+                try:
+                    dy = float(str(e.get("dy", "0")).replace(",", "."))
+                    valor = float(str(e.get("resultAbsoluteValue", "0")).replace(",", "."))
+                except Exception:
+                    dy = 0.0
+                    valor = 0.0
+
+                soma_dy += dy
+                soma_valor += valor
+
+                def parse_date_safe(d):
+                    try:
+                        return datetime.strptime(d, "%d/%m/%Y")
+                    except Exception:
+                        return None
+
+                pagamento = parse_date_safe(e.get("paymentDividend"))
+                aprovacao = parse_date_safe(e.get("dateApproval"))
+
+                if pagamento and (not ultima_data_pagamento or pagamento > ultima_data_pagamento):
+                    ultima_data_pagamento = pagamento
+                if aprovacao and (not ultima_data_aprovacao or aprovacao > ultima_data_aprovacao):
+                    ultima_data_aprovacao = aprovacao
+
+            base = eventos[0].copy()
+            base["dy"] = round(soma_dy, 2)
+            base["resultAbsoluteValue"] = round(soma_valor, 8)
+            if(len(eventos) > 1):
+                base["earningType"] = "Consolidado"
+            
+            if ultima_data_pagamento:
+                base["paymentDividend"] = ultima_data_pagamento.strftime("%d/%m/%Y")
+            if ultima_data_aprovacao:
+                base["dateApproval"] = ultima_data_aprovacao.strftime("%d/%m/%Y")
+
+            eventos_consolidados.append(base)
+
+        eventos_raw = eventos_consolidados
 
         # Filtra por ativo específico se solicitado
         if stock_filter:
             eventos_raw = [e for e in eventos_raw if e.get('code', '').upper() == stock_filter.upper()]
         
-        # print(len(eventos_raw))
         # Filtra por DY mínimo
         def parse_dy(dy_str):
             try:
@@ -126,11 +180,10 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
         print("[WARN] Nenhum evento encontrado para o período")
         return pd.DataFrame()
         
-    # Converte para DataFrame e ordena por dateCom (mais antigo -> mais novo)
+    # Converte para DataFrame e ordena por dateCom
     df = pd.DataFrame(all_events)
     df['dateCom'] = pd.to_datetime(df['dateCom'], format='%d/%m/%Y', dayfirst=True)
     
-    # Renomeia colunas para formato mais amigável
     colunas = {
         'code': 'Ativo',
         'value': 'Valor',
@@ -143,7 +196,6 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
     }
     
     df = df.rename(columns=colunas)
-    
     df = df.sort_values('DataCom', ascending=True)
     
     # Mostra os eventos ordenados
@@ -151,11 +203,10 @@ def get_dividend_events(start, end, indice="ibovespa", min_dy=0.7, stock_filter=
     for _, row in df.iterrows():
         print(f"{row['Ativo']}: {row['DataCom'].strftime('%d/%m/%Y')} - DY: {row['DY']}% - Tipo: {row['Tipo']}")
     
-    # Converte DataCom de volta para string no formato original
     df['DataCom'] = df['DataCom'].dt.strftime('%d/%m/%Y')
     
     return df
-    
+
 
 def get_price_history(ticker, start_day, start_next, end_day, end_next):
     """

@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-def save_trades_to_csv(df, min_dy, days_before, days_after, allow_overlap):
+def save_trades_to_csv(df, min_dy, days_before, days_after, allow_overlap, capital):
     """
     Salva os trades em um arquivo CSV com nome baseado nos parâmetros.
     
@@ -12,6 +12,17 @@ def save_trades_to_csv(df, min_dy, days_before, days_after, allow_overlap):
         days_after: Dias depois da data ex para venda
         allow_overlap: Se foi permitida sobreposição de datas
     """
+    acumulado = []
+
+    for _, trade in df.iterrows():
+        retorno_total_reais = trade["Retorno(R$)"]
+        capital += retorno_total_reais
+        acumulado.append(capital)
+        
+    df["CapitalAcumulado(R$)"] = acumulado
+
+
+    
     try:
         # Cria diretório se não existir
         os.makedirs('trades', exist_ok=True)

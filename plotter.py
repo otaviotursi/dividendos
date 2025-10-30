@@ -8,10 +8,10 @@ def plot_equity_curve(historico):
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), height_ratios=[2, 1])
     
     # Plot superior: Evolução do capital
-    ax1.plot(df["DataCom"], df["Capital"], marker="o", color="blue")
+    ax1.plot(df["DataCom"], df["CapitalAcumulado(R$)"], marker="o", color="blue")
     ax1.set_title("Evolução do Capital - Estratégia de Dividendos")
     ax1.set_xlabel("Data")
-    ax1.set_ylabel("Capital (R$)")
+    ax1.set_ylabel("Capital Acumulado(R$)")
     ax1.grid(True)
     
     # Plot inferior: Retornos por trade

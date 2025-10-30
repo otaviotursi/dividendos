@@ -51,7 +51,7 @@ def run_strategy(
         print(f"Trades agendados: {len(agendados)}")
 
     # Salva os trades agendados em CSV com nome personalizado
-    output_file = save_trades_to_csv(agendados, min_dy, days_before, days_after, allow_overlap)
+    output_file = save_trades_to_csv(agendados, min_dy, days_before, days_after, allow_overlap, valor_investido)
     if output_file and verbose:
         print(f"💾 Trades salvos em: {output_file}")
 

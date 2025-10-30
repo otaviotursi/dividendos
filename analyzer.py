@@ -86,7 +86,6 @@ def rank_best_trades(eventos_df, days_before, days_after, valor_investido):
                     "Retorno(R$)": round(retorno_total_reais, 2),
                     "ValorInvestido(R$)": round(valor_investido, 2),
                     "ValorTotal(R$)": round(valor_total, 2),
-                    "Valor": parse_dy(evento.get("Valor", 0)),
                     "Tipo": evento.get("Tipo", ""),
                 })
             except Exception as e:
