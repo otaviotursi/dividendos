@@ -9,12 +9,20 @@ from main import run_strategy
 def generate_parameter_combinations():
     """Gera todas as combinações de parâmetros a serem testadas"""
     params = {
-        'min_dy': [0.5, 0.7, 0.9, 1.1, 1.3, 1.5],
-        'days_before': [1, 2, 3, 5, 7, 10, 12, 15, 20],
-        'days_after': [1, 2, 3, 5, 7, 10, 12, 15, 20],
+        'min_dy': [0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7,2.0],
+        'days_before': [1, 2, 3, 5, 7, 10, 12, 15, 18, 20, 25],
+        'days_after': [1, 2, 3, 5, 7, 10, 12, 15, 18, 20, 25],
         'allow_overlap': [False, True],
         'valor_investido': [1000]
     }
+    # params = {
+    #     'min_dy': [0.5, 0.7],
+    #     'days_before': [1, 2],
+    #     'days_after': [1, 2],
+    #     'allow_overlap': [True],
+    #     'valor_investido': [1000]
+    # }
+
 
     keys = params.keys()
     combinations = [dict(zip(keys, v)) for v in itertools.product(*params.values())]
@@ -30,7 +38,7 @@ def init_results_file():
         
         headers = [
             'min_dy', 'days_before', 'days_after', 'allow_overlap',
-            'valor_investido', 'capital_final', 'retorno_percentual', 'csv_file'
+            'valor_investido', 'CapitalAcumulado(R$)','CapitalAcumuladoMinimo(R$)', 'retorno_percentual', 'csv_file'
         ]
         pd.DataFrame(columns=headers).to_csv(filename, index=False)
         return filename
@@ -46,18 +54,33 @@ def save_result(filename, result):
         df_new = pd.concat([df, pd.DataFrame([result])], ignore_index=True)
         df_new.to_csv(filename, index=False)
 
-        capital_final = result['capital_final']
+        capital_final = result['CapitalAcumulado(R$)']
         retorno = result['retorno_percentual']
         print(f"💾 Resultado salvo: R$ {capital_final:.2f} ({retorno:.2f}%)")
 
-        top_results = df_new.sort_values('capital_final', ascending=False).head()
+        top_results = df_new.sort_values('CapitalAcumulado(R$)', ascending=False).head()
         print("\n🏆 Top 5 até agora:")
         print(top_results.to_string(index=False))
+        
+        
+        
+        # Filtra apenas resultados com CapitalAcumuladoMinimo > 1000
+        df_filtered = df_new[df_new['CapitalAcumuladoMinimo(R$)'] > 1000]
+
+        # Ordena e pega os top 5
+        top_results = df_filtered.sort_values('CapitalAcumuladoMinimo(R$)', ascending=False).head()
+        
+        print("\n🏆 Top 5 com CapitalAcumuladoMinimo(R$) > 1000:")
+        if not top_results.empty:
+            print(top_results.to_string(index=False))
+        else:
+            print("[INFO] Nenhum resultado com CapitalAcumuladoMinimo(R$) > 1000 até agora.")
+            
     except Exception as e:
         print(f"[ERRO] Falha ao salvar resultado: {e}")
 
 
-def run_optimization(start_date="2023-10-26", end_date="2024-01-01"):
+def run_optimization(start_date="2023-10-27", end_date="2025-10-30"):
     """Executa a otimização testando várias combinações de parâmetros"""
     print("=== Otimização de Parâmetros ===")
 
@@ -79,7 +102,7 @@ def run_optimization(start_date="2023-10-26", end_date="2024-01-01"):
         try:
             iteration_start = time.time()
 
-            capital_final, _, csv_file = run_strategy(
+            capital_final,capital_min, _, csv_file = run_strategy(
                 **params,
                 start=start_date,
                 end=end_date,
@@ -88,7 +111,8 @@ def run_optimization(start_date="2023-10-26", end_date="2024-01-01"):
 
             result = {
                 **params,
-                'capital_final': capital_final,
+                'CapitalAcumulado(R$)': capital_final,
+                'CapitalAcumuladoMinimo(R$)': capital_min,
                 'retorno_percentual': ((capital_final - params['valor_investido']) / params['valor_investido']) * 100,
                 'csv_file': csv_file
             }

@@ -12,11 +12,13 @@ def schedule_trades(df_trades, allow_overlap=False):
     """
     selected = []
     last_sell_date = None
+    overlapped_count = 0  # contador de sobreposições
+    avoided_overlap_count = 0  # contador de trades evitados por sobreposição
 
     for _, trade in df_trades.iterrows():
         try:
             data_compra = parse_date(trade["DataCompra"])
-            print(f"[DEBUG] Processando trade: Ticker={trade['Ticker']}, DataCom={trade['DataCom']}, DataCompra={data_compra}, DataVenda={trade['DataVenda']}")
+            # print(f"[DEBUG] Processando trade: Ticker={trade['Ticker']}, DataCom={trade['DataCom']}, DataCompra={data_compra}, DataVenda={trade['DataVenda']}")
             
             # Se permite sobreposição, adiciona todas as operações
             # Se não permite, verifica se a data de compra é posterior à última venda
@@ -24,11 +26,12 @@ def schedule_trades(df_trades, allow_overlap=False):
                 selected.append(trade)
                 last_sell_date = parse_date(trade["DataVenda"])
                 
-                if allow_overlap:
-                    print(f"[INFO] Trade adicionado (sobreposição permitida)")
-                else:
-                    print(f"[INFO] Trade adicionado (sem sobreposição)")
+                # if allow_overlap:
+                #     print(f"[INFO] Trade adicionado (sobreposição permitida)")
+                # else:
+                #     print(f"[INFO] Trade adicionado (sem sobreposição)")
             else:
+                overlapped_count += 1  # soma um trade sobreposto
                 print(f"[INFO] Trade ignorado: data de compra {data_compra.strftime('%d/%m/%Y')} sobrepõe com venda anterior em {last_sell_date.strftime('%d/%m/%Y')}")
         
         except Exception as e:
@@ -44,5 +47,9 @@ def schedule_trades(df_trades, allow_overlap=False):
                 result[col] = result[col].apply(parse_date)
             except Exception as e:
                 print(f"[WARN] Erro ao formatar coluna {col}: {e}")
-        
+    
+    print(f"\n[RESUMO] Total de trades processados: {len(df_trades)}")
+    print(f"[RESUMO] Trades selecionados: {len(result)}")
+    print(f"[RESUMO] Trades sobrepostos ignorados: {overlapped_count}\n")
+    
     return result
